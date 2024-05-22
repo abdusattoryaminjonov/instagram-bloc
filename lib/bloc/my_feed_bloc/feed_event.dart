@@ -1,8 +1,10 @@
 import 'package:equatable/equatable.dart';
 
-abstract class FeedEvent extends Equatable {}
+abstract class MyFeedEvent extends Equatable {
+  const MyFeedEvent();
+}
 
-class FeedLoadPostEvent extends FeedEvent {
+class LoadFeedPostsEvent extends MyFeedEvent {
   @override
-  List<Object?> get props => [];
+  List<Object> get props => [];
 }

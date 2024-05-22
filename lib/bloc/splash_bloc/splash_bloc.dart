@@ -1,8 +1,9 @@
-import 'dart:async';
-
+import 'package:bloc/bloc.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:instaclon/bloc/splash_bloc/splash_event.dart';
+import 'package:instaclon/bloc/splash_bloc/splash_state.dart';
 
 import '../../pages/home_page.dart';
 import '../../pages/signin_page.dart';
@@ -11,40 +12,42 @@ import '../../services/log_service.dart';
 import '../../services/notif_service.dart';
 import '../../services/prefs_service.dart';
 import '../home_bloc/home_bloc.dart';
-import 'splash_event.dart';
-import 'splash_state.dart';
+import '../signin/signin_bloc.dart';
 
 class SplashBloc extends Bloc<SplashEvent, SplashState> {
-  SplashBloc() : super(SplashInitialState());
+  SplashBloc() : super(SplashInitialState()) {
+    on<SplashWaitEvent>(_onSplashWaitEvent);
+  }
 
-  static final FirebaseMessaging _firebaseMessaging =
-      FirebaseMessaging.instance;
+  Future<void> _onSplashWaitEvent(SplashWaitEvent event, Emitter<SplashState> emit) async {
+    emit(SplashLoadingState());
+    await Future.delayed(const Duration(seconds: 2));
+    emit(SplashLoadedState());
+  }
 
-  callNextPage(BuildContext context) {
-    if (AuthService.isLoggedIn()) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (BuildContext context) {
-            return BlocProvider(
-              create: (context) => HomeBloc(),
-              child: const HomePage(),
-            );
-          },
-        ),
-      );
-    } else {
-      Navigator.pushReplacementNamed(context, SignInPage.id);
+  callNextPage(BuildContext context){
+    if(AuthService.isLoggedIn()){
+      Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => BlocProvider(
+                create: (context) => HomeBloc(),
+                child: const HomePage(),
+              )));
+    }else{
+      Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => BlocProvider(
+                create: (context) => SignInBloc(),
+                child: const SignInPage(),
+              )));
     }
   }
 
-  initTimer(BuildContext context) {
-    Timer(const Duration(seconds: 2), () {
-      callNextPage(context);
-    });
-  }
-
-  initNotification() async {
-    NotificationSettings settings = await _firebaseMessaging.requestPermission(
+  initNotification() async{
+    final FirebaseMessaging firebaseMessaging = FirebaseMessaging.instance;
+    NotificationSettings settings = await firebaseMessaging.requestPermission(
       alert: true,
       announcement: false,
       badge: true,
@@ -54,13 +57,13 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
       sound: true,
     );
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+    if(settings.authorizationStatus == AuthorizationStatus.authorized){
       LogService.i('User granted permission');
-    } else {
+    }else{
       LogService.e('User declined or has not accepted permission');
     }
 
-    _firebaseMessaging.getToken().then((value) async {
+    firebaseMessaging.getToken().then((value) async{
       String fcmToken = value.toString();
       Prefs.saveFCM(fcmToken);
       String token = await Prefs.loadFCM();
@@ -72,7 +75,7 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
       String body = message.notification!.body.toString();
       LogService.i(title);
       LogService.i(body);
-      NotifService().showLocalNotification(title, body);
+      NotifService().showLocalNotification(title,body);
     });
   }
 }

@@ -1,8 +1,20 @@
 import 'package:equatable/equatable.dart';
 
-abstract class LikeEvent extends Equatable {}
+import '../../models/post_model.dart';
 
-class LikeLoadLikesEvent extends LikeEvent {
+abstract class MyLikeEvent extends Equatable {
+  const MyLikeEvent();
+}
+
+class LikeLoadLikesEvent extends MyLikeEvent {
   @override
-  List<Object?> get props => [];
+  List<Object> get props => [];
+}
+class UnLikePostEvent extends MyLikeEvent {
+  Post post;
+
+  UnLikePostEvent({required this.post});
+
+  @override
+  List<Object> get props => [post];
 }

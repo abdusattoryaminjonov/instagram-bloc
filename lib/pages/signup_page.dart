@@ -1,13 +1,9 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:instaclon/models/member_model.dart';
-import 'package:instaclon/pages/signin_page.dart';
-
-import '../services/auth_service.dart';
-import '../services/db_service.dart';
-import '../services/prefs_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../bloc/signup/signup_bloc.dart';
+import '../bloc/signup/signup_event.dart';
+import '../bloc/signup/signup_state.dart';
 import '../services/utils_service.dart';
-import 'home_page.dart';
 
 class SignUpPage extends StatefulWidget {
   static const String id = "signup_page";
@@ -19,68 +15,65 @@ class SignUpPage extends StatefulWidget {
 }
 
 class _SignUpPageState extends State<SignUpPage> {
+  late SignUpBloc signUpBloc;
 
-  var isLoading = false;
   var fullnameController = TextEditingController();
   var emailController = TextEditingController();
   var passwordController = TextEditingController();
   var cpasswordController = TextEditingController();
 
-
-  _doSignUp(){
-    String name = fullnameController.text.toString().trim();
+  _doSignUp() async{
+    String fullname = fullnameController.text.toString().trim();
     String email = emailController.text.toString().trim();
     String password = passwordController.text.toString().trim();
-    if(name.isEmpty || email.isEmpty || password.isEmpty) return;
+    String cpassword = cpasswordController.text.toString().trim();
 
-    setState(() {
-      isLoading = true;
-    });
+    if (fullname.isEmpty || email.isEmpty || password.isEmpty) return;
 
-    AuthService.signUpUser(context, name, email, password).then((firebaseUser) => {
-      _getFirebaseUser(firebaseUser!, Member(name, email)),
-    });
-  }
-  _getFirebaseUser(User? firebaseUser,Member member) async {
-    setState(() {
-      isLoading = false;
-    });
-    if (firebaseUser != null) {
-      await Prefs.saveUserId(firebaseUser.uid);
-      _saveMemberIdToLocal(firebaseUser);
-      _saveMemberToCloud(member);
-
-      _callHomePage();
-    } else {
-      Utils.fireToast("Check your information",Colors.red);
+    if (cpassword != password) {
+      Utils.fireToast("Password and confirm password does not match");
+      return;
     }
+
+    signUpBloc.add(SignedUpEvent(context: context, fullname: fullname, email: email, password: password));
   }
 
-  _saveMemberIdToLocal(User firebaseUser)async{
-    await Prefs.saveUserId(firebaseUser.uid);
-  }
-  _saveMemberToCloud(Member member) async{
-    await DBService.storeMember(member);
-  }
-
-  _callHomePage(){
-    Navigator.pushReplacementNamed(context, HomePage.id);
-  }
-
-  _callSignInPage(){
-    Navigator.pushReplacementNamed(context, SignInPage.id);
+  @override
+  void initState() {
+    super.initState();
+    signUpBloc = context.read<SignUpBloc>();
   }
 
   @override
   Widget build(BuildContext context) {
+    return BlocConsumer<SignUpBloc, SignUpState>(
+      listener: (context, state){
+        if(state is SignUpSuccessState){
+          signUpBloc.callHomePage(context);
+        }
+        if(state is SignUpFailureState){
+          Utils.fireToast(state.errorMessage);
+        }
+      },
+      builder: (context, state){
+        if(state is SignUpLoadingState){
+          return viewOfSignUpPage(true);
+        }
+        return viewOfSignUpPage(false);
+      },
+    );
+  }
+
+  Widget viewOfSignUpPage(bool isLoading){
     return GestureDetector(
-      onTap:() {
+      onTap: (){
         FocusManager.instance.primaryFocus?.unfocus();
       },
       child: Scaffold(
         body: Container(
+          padding: const EdgeInsets.all(20),
           width: MediaQuery.of(context).size.width,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
               gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -88,55 +81,55 @@ class _SignUpPageState extends State<SignUpPage> {
                     Color.fromRGBO(193, 53, 132, 1),
                     Color.fromRGBO(131, 58, 180, 1),
                   ])),
-          padding: EdgeInsets.all(20),
           child: Stack(
             children: [
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // #logopart
-                        Text(
+                        const Text(
                           "Instagram",
                           style: TextStyle(
+                              color: Colors.white,
                               fontSize: 45,
-                              fontFamily: "Billabong",
-                              color: Colors.white),
+                              fontFamily: "Billabong"),
                         ),
 
-                        // #fullnameinput
+                        //#fullname
                         Container(
+                          margin: const EdgeInsets.only(top: 10),
                           height: 50,
                           padding: EdgeInsets.only(left: 10, right: 10),
                           decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(7),
-                              color: Colors.white.withOpacity(0.2)),
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(7)),
                           child: TextField(
                             controller: fullnameController,
-                            style: TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
+                            style: const TextStyle(color: Colors.white),
+                            decoration: const InputDecoration(
                                 hintText: "Fullname",
                                 border: InputBorder.none,
-                                hintStyle:
-                                TextStyle(fontSize: 17, color: Colors.white54)),
+                                hintStyle: TextStyle(
+                                    fontSize: 17, color: Colors.white54)),
                           ),
                         ),
 
-                        // #emailinput
+                        //#email
                         Container(
-                          margin: EdgeInsets.only(top: 10),
+                          margin: const EdgeInsets.only(top: 10),
                           height: 50,
-                          padding: EdgeInsets.only(left: 10, right: 10),
+                          padding: const EdgeInsets.only(left: 10, right: 10),
                           decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(7),
-                              color: Colors.white.withOpacity(0.2)),
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(7)),
                           child: TextField(
                             controller: emailController,
-                            style: TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
+                            style: const TextStyle(color: Colors.white),
+                            decoration: const InputDecoration(
                                 hintText: "Email",
                                 border: InputBorder.none,
                                 hintStyle:
@@ -144,19 +137,19 @@ class _SignUpPageState extends State<SignUpPage> {
                           ),
                         ),
 
-                        // #passwordinput
+                        //#password
                         Container(
-                          margin: EdgeInsets.only(top: 10),
+                          margin: const EdgeInsets.only(top: 10),
                           height: 50,
-                          padding: EdgeInsets.only(left: 10, right: 10),
+                          padding: const EdgeInsets.only(left: 10, right: 10),
                           decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(7),
-                              color: Colors.white.withOpacity(0.2)),
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(7)),
                           child: TextField(
                             controller: passwordController,
-                            style: TextStyle(color: Colors.white),
+                            style: const TextStyle(color: Colors.white),
                             obscureText: true,
-                            decoration: InputDecoration(
+                            decoration: const InputDecoration(
                                 hintText: "Password",
                                 border: InputBorder.none,
                                 hintStyle:
@@ -164,73 +157,85 @@ class _SignUpPageState extends State<SignUpPage> {
                           ),
                         ),
 
-                        // #cpasswordinput
+                        //#cpassword
                         Container(
                           margin: EdgeInsets.only(top: 10),
                           height: 50,
                           padding: EdgeInsets.only(left: 10, right: 10),
                           decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(7),
-                              color: Colors.white.withOpacity(0.2)),
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(7)),
                           child: TextField(
                             controller: cpasswordController,
-                            style: TextStyle(color: Colors.white),
                             obscureText: true,
-                            decoration: InputDecoration(
+                            style: const TextStyle(color: Colors.white),
+                            decoration: const InputDecoration(
                                 hintText: "Confirm Password",
                                 border: InputBorder.none,
-                                hintStyle:
-                                TextStyle(fontSize: 17, color: Colors.white54)),
+                                hintStyle: TextStyle(
+                                    fontSize: 17, color: Colors.white54)),
                           ),
                         ),
 
-                        // #signinbutton
+                        //#signin
                         GestureDetector(
                           onTap: () {
                             _doSignUp();
                           },
                           child: Container(
-                              width: double.infinity,
                               margin: EdgeInsets.only(top: 10),
                               height: 50,
+                              padding: EdgeInsets.only(left: 10, right: 10),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(7),
-                              ),
-                              child: Center(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(7)),
+                              child: const Center(
                                 child: Text(
                                   "Sign Up",
-                                  style: TextStyle(fontSize: 17, color: Colors.white),
+                                  style:
+                                  TextStyle(color: Colors.white, fontSize: 17),
                                 ),
                               )),
                         ),
                       ],
                     ),
                   ),
-                  Container(
-                    height: 48,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "Already have an account?",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        SizedBox(
-                          width: 10,
-                        ),
-                        GestureDetector(
-                            onTap: _callSignInPage,
-                            child: Text(
-                              "Sign In",
-                              style: TextStyle(
-                                  color: Colors.white, fontWeight: FontWeight.bold),
-                            )),
-                      ],
-                    ),
+
+
+                  //#footer
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        "Already have an account?",
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                      const SizedBox(
+                        width: 10,
+                      ),
+                      GestureDetector(
+                          onTap: () {
+                            signUpBloc.callSignInPage(context);
+                          },
+                          child: const Text(
+                            "Sign In",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold),
+                          )),
+                    ],
                   ),
+
                 ],
               ),
+
+              isLoading
+                  ? const Center(
+                child: CircularProgressIndicator(),
+              )
+                  : const SizedBox.shrink(),
+
             ],
           ),
         ),

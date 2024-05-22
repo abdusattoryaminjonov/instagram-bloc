@@ -1,32 +1,28 @@
-import 'package:equatable/equatable.dart';
+
 import '../../models/post_model.dart';
 
-abstract class LikeState extends Equatable {}
+abstract class MyLikeState {}
 
-class LikeInitialState extends LikeState {
-  @override
-  List<Object?> get props => [];
+class MyLikeInitialState extends MyLikeState {}
+
+class MyLikeLoadingState extends MyLikeState {}
+
+class MyLikeSuccessState extends MyLikeState {
+  List<Post> items;
+
+  MyLikeSuccessState({required this.items});
 }
 
-class LikeErrorState extends LikeState {
-  final String message;
+class MyLikeFailureState extends MyLikeState {
+  final String errorMessage;
 
-  LikeErrorState(this.message);
-
-  @override
-  List<Object?> get props => [message];
+  MyLikeFailureState(this.errorMessage);
 }
+class UnLikePostSuccessState extends MyLikeState {
+  Post post;
 
-class LikeLoadingState extends LikeState {
-  @override
-  List<Object?> get props => [];
-}
-
-class LikeLoadLikesState extends LikeState {
-  final List<Post> posts;
-
-  LikeLoadLikesState(this.posts);
+  UnLikePostSuccessState({required this.post});
 
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [post];
 }

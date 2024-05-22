@@ -1,23 +1,24 @@
+
 import 'package:bloc/bloc.dart';
 
-import '../../models/post_model.dart';
 import '../../services/db_service.dart';
 import 'feed_event.dart';
 import 'feed_state.dart';
 
-class FeedBloc extends Bloc<FeedEvent, FeedState> {
-  List<Post> items = [];
-
-  FeedBloc() : super(FeedInitialState()) {
-    on<FeedLoadPostEvent>(_apiLoadFeeds);
+class MyFeedBloc extends Bloc<MyFeedEvent, MyFeedState> {
+  MyFeedBloc() : super(MyFeedInitialState()) {
+    on<LoadFeedPostsEvent>(_onLoadPostsEvent);
   }
 
-  Future<void> _apiLoadFeeds(FeedLoadPostEvent event, Emitter<FeedState> emit) async {
-    emit(FeedLoadingState());
+  Future<void> _onLoadPostsEvent(LoadFeedPostsEvent event, Emitter<MyFeedState> emit) async {
+    emit(MyFeedLoadingState());
 
-    var result = await DBService.loadFeeds();
-    items = result;
+    var items = await DBService.loadFeeds();
 
-    emit(FeedLoadPostState(items));
+    if (items.isNotEmpty) {
+      emit(MyFeedSuccessState(items: items));
+    } else {
+      emit(MyFeedFailureState("No data"));
+    }
   }
 }

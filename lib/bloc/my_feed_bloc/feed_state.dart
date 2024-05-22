@@ -1,32 +1,19 @@
-import 'package:equatable/equatable.dart';
 import '../../models/post_model.dart';
 
-abstract class FeedState extends Equatable {}
+abstract class MyFeedState {}
 
-class FeedInitialState extends FeedState {
-  @override
-  List<Object?> get props => [];
+class MyFeedInitialState extends MyFeedState {}
+
+class MyFeedLoadingState extends MyFeedState {}
+
+class MyFeedSuccessState extends MyFeedState {
+  List<Post> items;
+
+  MyFeedSuccessState({required this.items});
 }
 
-class FeedErrorState extends FeedState {
-  final String message;
+class MyFeedFailureState extends MyFeedState {
+  final String errorMessage;
 
-  FeedErrorState(this.message);
-
-  @override
-  List<Object?> get props => [message];
-}
-
-class FeedLoadingState extends FeedState {
-  @override
-  List<Object?> get props => [];
-}
-
-class FeedLoadPostState extends FeedState {
-  final List<Post> posts;
-
-  FeedLoadPostState(this.posts);
-
-  @override
-  List<Object?> get props => [];
+  MyFeedFailureState(this.errorMessage);
 }

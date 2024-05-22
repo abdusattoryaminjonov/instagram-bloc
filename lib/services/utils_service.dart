@@ -7,13 +7,13 @@ import 'package:platform_device_id_v3/platform_device_id.dart';
 
 class Utils {
 
-  static void fireToast(String msg,color) {
+  static void fireToast(String msg) {
     Fluttertoast.showToast(
         msg: msg,
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
         timeInSecForIosWeb: 1,
-        backgroundColor: color,
+        backgroundColor: Colors.blue,
         textColor: Colors.white,
         fontSize: 16.0);
   }

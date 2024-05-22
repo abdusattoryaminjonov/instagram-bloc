@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../bloc/search_bloc/follow_member_bloc.dart';
+import '../bloc/search_bloc/follow_member_event.dart';
+import '../bloc/search_bloc/follow_member_state.dart';
+import '../bloc/search_bloc/mysearch_bloc.dart';
+import '../bloc/search_bloc/mysearch_event.dart';
+import '../bloc/search_bloc/mysearch_state.dart';
 import '../models/member_model.dart';
-import '../services/db_service.dart';
-import '../services/http_service.dart';
+
 
 class MySearchPage extends StatefulWidget {
   const MySearchPage({Key? key}) : super(key: key);
@@ -11,67 +18,33 @@ class MySearchPage extends StatefulWidget {
 }
 
 class _MySearchPageState extends State<MySearchPage> {
-  bool followed = true;
-  bool isLoading = false;
+  late MySearchBloc searchBloc;
   var searchController = TextEditingController();
-  List<Member> items = [];
-
-  void _apiFollowMember(Member someone) async {
-    setState(() {
-      isLoading = true;
-    });
-    await DBService.followMember(someone);
-    setState(() {
-      someone.followed = true;
-      isLoading = false;
-    });
-    DBService.storePostsToMyFeed(someone);
-    sendNotificationToFollowedMember(someone);
-  }
-
-  void sendNotificationToFollowedMember(Member someone) async {
-    Member me = await DBService.loadMember();
-    await Network.POST(Network.API_SEND_NOTIF, Network.paramsNotify(me, someone));
-  }
-
-  void _apiUnFollowMember(Member someone) async {
-    setState(() {
-      isLoading = true;
-    });
-    await DBService.unfollowMember(someone);
-    setState(() {
-      someone.followed = false;
-      isLoading = false;
-    });
-    DBService.removePostsFromMyFeed(someone);
-  }
-
-  void _apiSearchMembers(String keyword) {
-    setState(() {
-      isLoading = true;
-    });
-    DBService.searchMembers(keyword).then((users) => {
-      debugPrint(users.length.toString()),
-      _resSearchMembers(users),
-    });
-  }
-
-  _resSearchMembers(List<Member> members){
-    setState(() {
-      items = members;
-
-      isLoading = false;
-    });
-  }
 
   @override
   void initState() {
     super.initState();
-    _apiSearchMembers("");
+    searchBloc = context.read<MySearchBloc>();
+    searchBloc.add(LoadSearchMembersEvent(keyword: ""));
   }
 
   @override
   Widget build(BuildContext context) {
+    return BlocConsumer<MySearchBloc, MySearchState>(
+      listener: (context, state){},
+      builder: (context, state){
+        if(state is MySearchLoadingState){
+          return viewOfMySearchPage(true, []);
+        }
+        if(state is MySearchSuccessState){
+          return viewOfMySearchPage(false, state.items);
+        }
+        return viewOfMySearchPage(false, []);
+      },
+    );
+  }
+
+  Widget viewOfMySearchPage(bool isLoading, List<Member> items){
     return Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
@@ -185,22 +158,34 @@ class _MySearchPageState extends State<MySearchPage> {
               children: [
                 GestureDetector(
                   onTap: () {
-                    if (member.followed) {
-                      _apiUnFollowMember(member);
+                    if (!member.followed) {
+                      context.read<FollowMemberBloc>().add(FollowMemberEvent(someone: member));
                     } else {
-                      _apiFollowMember(member);
+                      context.read<FollowMemberBloc>().add(UnFollowMemberEvent(someone: member));
                     }
                   },
-                  child: Container(
-                    width: 100,
-                    height: 30,
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(3),
-                        border: Border.all(width: 1, color: Colors.grey)),
-                    child: Center(
-                      child:
-                      member.followed ? const Text("Following") : const Text("Follow"),
-                    ),
+                  child: BlocBuilder<FollowMemberBloc, FollowState>(
+                    builder: (context, state){
+                      return member.followed ? Container(
+                        width: 100,
+                        height: 30,
+                        decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(3),
+                            border: Border.all(width: 1, color: Colors.grey)),
+                        child: const Center(
+                            child: Text("Following")
+                        ),
+                      ):Container(
+                        width: 100,
+                        height: 30,
+                        decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(3),
+                            border: Border.all(width: 1, color: Colors.grey)),
+                        child: const Center(
+                            child: Text("Follow")
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],
